@@ -102,13 +102,11 @@ except imaplib.IMAP4.error:
     exit(1)
 
 print(f'Successfully logged in IMAP as {IMAP_EMAIL}')
-mail.logout()
 
 # Test SMTP connection
 server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-
 server.login(SMTP_EMAIL, SMTP_PASSWORD)
-
+server.quit()
 # Selecting mail box
 mail.select(TARGET_BOX)
 
@@ -131,7 +129,7 @@ for block in data:
     mail_ids += block.split()
 
 LAST_MAIL = len(mail_ids)
-server.quit()
+mail.logout()
       
 def reload():
     global LAST_MAIL
