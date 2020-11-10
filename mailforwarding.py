@@ -93,7 +93,7 @@ print("\n")
 #TARGET_ADDRESS = 'lopus312@gmail.com'
 
 
-# connect to the server and go to its inbox
+# Test IMAP connection
 mail = imaplib.IMAP4_SSL(IMAP_SERVER)
 try:
     mail.login(IMAP_EMAIL, IMAP_PASSWORD)
@@ -101,7 +101,14 @@ except imaplib.IMAP4.error:
     print('AUTHENTICATION FAILED\nInvalid IMAP login credentials')
     exit(1)
 
-print(f'Logged in as {IMAP_EMAIL}')
+print(f'Successfully logged in IMAP as {IMAP_EMAIL}')
+mail.logout()
+
+# Test SMTP connection
+server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+
+server.login(SMTP_EMAIL, SMTP_PASSWORD)
+server.quit()
 
 # Selecting mail box
 mail.select(TARGET_BOX)
@@ -129,6 +136,10 @@ LAST_MAIL = len(mail_ids)
 def reload():
     global LAST_MAIL
 
+    mail = imaplib.IMAP4_SSL(IMAP_SERVER)
+    mail.login(IMAP_EMAIL, IMAP_PASSWORD)
+    mail.select(TARGET_BOX)
+
     status, data = mail.search(None, 'ALL')
     mail_ids = []
     for block in data:
@@ -154,24 +165,6 @@ def reload():
                         # at the third
                         message = email.message_from_bytes(response_part[1])
 
-
-
-                        if message.is_multipart():
-                                mail_content = ''
-
-                                # on multipart we have the text message and
-                                # another things like annex, and html version
-                                # of the message, in that case we loop through
-                                # the email payload
-                                for part in message.get_payload():
-                                    # if the content type is text/plain
-                                    # we extract it
-                                    if part.get_content_type() == 'text/plain':
-                                        mail_content += part.get_payload()
-                        else:
-                            # if the message isn't multipart, just extract it
-                            mail_content = message.get_payload()
-
                         try:
                             # we'll connect using SSL
                             server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
@@ -182,11 +175,14 @@ def reload():
                             server.quit()
                         except:
                             print(sys.exc_info()[0])
+                        finally:
+                            mail.logout()
 
                         print(f'{datetime.now().strftime( "%H:%M:%S" )} Forwarded message from {IMAP_EMAIL} through {SMTP_EMAIL} to {TARGET_ADDRESS}. Email subject: {message["subject"]}')
 
     LAST_MAIL = len(mail_ids)
     timer = threading.Timer(TIMER, reload)
     timer.start()
+
 timer = threading.Timer(TIMER, reload)
 timer.start()
