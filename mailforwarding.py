@@ -143,18 +143,18 @@ def ping(host):
     param = '-n' if platform.system().lower()=='windows' else '-c'
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
-    try:
-        return subprocess.call(command, stdout=open(os.devnull,"wb")) == 0
-    except:
-        return False
+    return subprocess.call(command, stdout=open(os.devnull,"wb")) == 0
+
 
 def reload():
     global LAST_MAIL
 
-    if not ping("www.google.com"):
-        print("Could not ping google.com, do you have internet access?")
-        if not ping("https://www.seznam.cz"):
+    if not ping("8.8.8.8"):
+        print("Could not ping google dns address, do you have internet access?")
+        if not ping("1.1.1.1"):
             print("Could not ping secondary address. Internet connection is not established. Skipping email refresh")
+            timer = threading.Timer(TIMER, reload)
+            timer.start()
             return
 
     mail = imaplib.IMAP4_SSL(IMAP_SERVER)
