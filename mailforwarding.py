@@ -1,4 +1,4 @@
-import smtplib,imaplib,email,itertools,threading,sys,getpass, platform,subprocess
+import smtplib,imaplib,email,itertools,threading,sys,getpass, platform,subprocess, os
 from datetime import datetime
 from configparser import ConfigParser
 from os import path
@@ -143,7 +143,10 @@ def ping(host):
     param = '-n' if platform.system().lower()=='windows' else '-c'
     # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
-    return subprocess.call(command) == 0
+    try:
+        return subprocess.call(command, stdout=open(os.devnull,"wb")) == 0
+    except:
+        return False
 
 def reload():
     global LAST_MAIL
