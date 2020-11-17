@@ -1,4 +1,4 @@
-import smtplib,imaplib,email,itertools,threading,sys,getpass
+import smtplib,imaplib,email,itertools,threading,sys,getpass, platform,subprocess
 from datetime import datetime
 from configparser import ConfigParser
 from os import path
@@ -103,10 +103,13 @@ except imaplib.IMAP4.error:
 
 print(f'Successfully logged in IMAP as {IMAP_EMAIL}')
 
+
 # Test SMTP connection
 server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+
 server.login(SMTP_EMAIL, SMTP_PASSWORD)
 server.quit()
+
 # Selecting mail box
 mail.select(TARGET_BOX)
 
@@ -130,9 +133,26 @@ for block in data:
 
 LAST_MAIL = len(mail_ids)
 mail.logout()
-      
+
+def ping(host):
+    """
+    Returns True if host (str) responds to a ping request.
+    Remember that a host may not respond to a ping (ICMP) request even if the host name is valid.
+    """
+    # Option for the number of packets as a function of
+    param = '-n' if platform.system().lower()=='windows' else '-c'
+    # Building the command. Ex: "ping -c 1 google.com"
+    command = ['ping', param, '1', host]
+    return subprocess.call(command) == 0
+
 def reload():
     global LAST_MAIL
+
+    if not ping("www.google.com"):
+        print("Could not ping google.com, do you have internet access?")
+        if not ping("https://www.seznam.cz"):
+            print("Could not ping secondary address. Internet connection is not established. Skipping email refresh")
+            return
 
     mail = imaplib.IMAP4_SSL(IMAP_SERVER)
     mail.login(IMAP_EMAIL, IMAP_PASSWORD)
@@ -184,3 +204,4 @@ def reload():
 
 timer = threading.Timer(TIMER, reload)
 timer.start()
+
