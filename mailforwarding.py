@@ -147,63 +147,67 @@ def ping(host):
 
 
 def reload():
-    global LAST_MAIL
+    try:
+        global LAST_MAIL
 
-    if not ping("8.8.8.8"):
-        print("Could not ping google dns address, do you have internet access?")
-        if not ping("1.1.1.1"):
-            print("Could not ping secondary address. Internet connection is not established. Skipping email refresh")
-            timer = threading.Timer(TIMER, reload)
-            timer.start()
-            return
+        if not ping("8.8.8.8"):
+            print("Could not ping google dns address, do you have internet access?")
+            if not ping("1.1.1.1"):
+                print("Could not ping secondary address. Internet connection is not established. Skipping email refresh")
+                timer = threading.Timer(TIMER, reload)
+                timer.start()
+                return
 
-    mail = imaplib.IMAP4_SSL(IMAP_SERVER)
-    mail.login(IMAP_EMAIL, IMAP_PASSWORD)
-    mail.select(TARGET_BOX)
+        mail = imaplib.IMAP4_SSL(IMAP_SERVER)
+        mail.login(IMAP_EMAIL, IMAP_PASSWORD)
+        mail.select(TARGET_BOX)
 
-    status, data = mail.search(None, 'ALL')
-    mail_ids = []
-    for block in data:
-        mail_ids += block.split()
+        status, data = mail.search(None, 'ALL')
+        mail_ids = []
+        for block in data:
+            mail_ids += block.split()
 
 
-    if len(mail_ids)>LAST_MAIL:
+        if len(mail_ids)>LAST_MAIL:
 
-        # Iterate over mail_ids from lastId
-        for id in itertools.islice(mail_ids,LAST_MAIL,None):
-                # the fetch function fetch the email given its id
-                # and format that you want the message to be
-                status, data = mail.fetch(id, '(RFC822)')
+            # Iterate over mail_ids from lastId
+            for id in itertools.islice(mail_ids,LAST_MAIL,None):
+                    # the fetch function fetch the email given its id
+                    # and format that you want the message to be
+                    status, data = mail.fetch(id, '(RFC822)')
 
-                # the content data at the '(RFC822)' format comes on
-                # a list with a tuple with header, content, and the closing
-                # byte b')'
-                for response_part in data:
-                    # so if its a tuple...
-                    if isinstance(response_part, tuple):
-                        # we go for the content at its second element
-                        # skipping the header at the first and the closing
-                        # at the third
-                        message = email.message_from_bytes(response_part[1])
+                    # the content data at the '(RFC822)' format comes on
+                    # a list with a tuple with header, content, and the closing
+                    # byte b')'
+                    for response_part in data:
+                        # so if its a tuple...
+                        if isinstance(response_part, tuple):
+                            # we go for the content at its second element
+                            # skipping the header at the first and the closing
+                            # at the third
+                            message = email.message_from_bytes(response_part[1])
 
-                        try:
-                            # we'll connect using SSL
-                            server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
-                            # to interact with the server, first we log in
-                            # and then we send the message
-                            server.login(SMTP_EMAIL, SMTP_PASSWORD)
-                            server.sendmail(SMTP_EMAIL, TARGET_ADDRESS, message.as_string())
-                            server.quit()
-                        except:
-                            print(sys.exc_info()[0])
-                        finally:
-                            mail.logout()
+                            try:
+                                # we'll connect using SSL
+                                server = smtplib.SMTP_SSL(SMTP_SERVER, SMTP_PORT)
+                                # to interact with the server, first we log in
+                                # and then we send the message
+                                server.login(SMTP_EMAIL, SMTP_PASSWORD)
+                                server.sendmail(SMTP_EMAIL, TARGET_ADDRESS, message.as_string())
+                                server.quit()
+                            except:
+                                print(sys.exc_info()[0])
+                            finally:
+                                mail.logout()
 
-                        print(f'{datetime.now().strftime( "%H:%M:%S" )} Forwarded message from {IMAP_EMAIL} through {SMTP_EMAIL} to {TARGET_ADDRESS}. Email subject: {message["subject"]}')
+                            print(f'{datetime.now().strftime( "%H:%M:%S" )} Forwarded message from {IMAP_EMAIL} through {SMTP_EMAIL} to {TARGET_ADDRESS}. Email subject: {message["subject"]}')
 
-    LAST_MAIL = len(mail_ids)
-    timer = threading.Timer(TIMER, reload)
-    timer.start()
+        LAST_MAIL = len(mail_ids)
+    except Exception as e:
+        print(e)
+    finally:
+        timer = threading.Timer(TIMER, reload)
+        timer.start()
 
 timer = threading.Timer(TIMER, reload)
 timer.start()
